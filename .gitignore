@@ -1,0 +1,4 @@
+influxdb-data/data/
+reports/
+grafana-data/
+influxdb-data/

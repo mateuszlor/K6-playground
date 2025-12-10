@@ -1,0 +1,31 @@
+# This workflow validates all JavaScript test files in the `src/` directory using `k6 inspect`.
+# It runs on pushes and pull requests to any branch.
+
+name: Validate k6 Test Scripts
+
+on:
+  push:
+    paths:
+      - 'src/**/*.js'
+  pull_request:
+    paths:
+      - 'src/**/*.js'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          curl -s https://raw.githubusercontent.com/k6io/k6/master/scripts/install.sh | bash
+          echo "k6 version:" && k6 version
+
+      - name: Run k6 inspect on all test scripts
+        run: |
+          for file in src/*.js; do
+            echo "Validating $file"
+            k6 inspect "$file"
+          done

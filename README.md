@@ -13,12 +13,9 @@ This project was created with the assistance of **Antigravity**, an agentic AI c
 ## 📂 Project Structure
 
 - **Scripts** (`src/tests/`):
-  - `src/tests/smoke_test.js`: Validates system availability (1 VU).
-  - `src/tests/load_test.js`: Standard load test (ramp up to ~20 VUs).
-  - `src/tests/stress_test.js`: Finds system breaking point (ramp up to 100 VUs).
-  - `src/tests/spike_test.js`: Tests stability under sudden bursts (0 -> 100 VUs instantly).
+  - `src/tests/performance_test.js`: Unified script that handles all test types based on parameters.
 - **Configuration** (`config/`):
-  - `config/common.json`: Shared test scenarios (stages, thresholds).
+  - `config/common.json`: Shared test scenarios (stages, thresholds) for each test type (`smoke`, `load`, `stress`, `spike`).
   - `config/env/*.json`: Environment-specific settings (e.g. `baseUrl`).
 - **Visualization (Docker)**:
   - `docker-compose.yml`: Stack with InfluxDB and Grafana.
@@ -40,12 +37,15 @@ Customize the tests by editing `config/common.json` (scenarios) or `config/env/*
 - **baseUrl**: Target URL (in `config/env/dev.json`).
 - **thresholds**: Pass/Fail criteria (in `config/common.json`).
 
-### Environment Selection
-Select the target environment (default: `dev`) using the `ENV` variable:
+### Parameter Injection
+The unified script uses environment variables to control its behavior:
+- **ENV**: Target environment (`dev`, `prod`). Default: `dev`.
+- **TEST_TYPE**: Test scenario to run (`smoke`, `load`, `stress`, `spike`). Default: `smoke`.
+
+Example:
 ```powershell
-k6 run -e ENV=prod src/tests/load_test.js
+k6 run -e ENV=prod -e TEST_TYPE=load src/tests/performance_test.js
 ```
-Available environments: `dev`, `prod` (correspond to files in `config/env/`).
 
 ## 🏃 Running Tests
 
@@ -59,20 +59,23 @@ Run this to check script syntax without executing tests (useful for CI "Build" s
 ```
 
 ### 2. Run All Sequentially (Recommended)
-This script runs Smoke -> Load -> Spike -> Stress tests one by one, sends metrics to InfluxDB, and generates XML reports.
+This script runs Smoke -> Load -> Spike -> Stress tests one by one using the unified script, sends metrics to InfluxDB, and generates XML reports.
 ```powershell
 ./run_all_tests.ps1
 ```
 
 ### 3. Run Manually
-You can run individual tests using k6 directly (mind the `src/tests/` path).
+You can run individual scenarios using k6 by passing the `TEST_TYPE`:
 
 ```powershell
-# Run smoke test
-k6 run src/tests/smoke_test.js
+# Run smoke test (default)
+k6 run src/tests/performance_test.js
+
+# Run load test
+k6 run -e TEST_TYPE=load src/tests/performance_test.js
 
 # Run with output to InfluxDB (for Dashboard)
-k6 run --out influxdb=http://localhost:8086/k6 src/tests/load_test.js
+k6 run --out influxdb=http://localhost:8086/k6 -e TEST_TYPE=stress src/tests/performance_test.js
 ```
 
 #### 📄 HTML Reports (Optional)
@@ -81,13 +84,13 @@ The native k6 web dashboard can export an HTML report. To generate it, set the f
 
 ```powershell
 $env:K6_WEB_DASHBOARD = "true"
-$env:K6_WEB_DASHBOARD_EXPORT = "reports/html/report-${test}.html"
+$env:K6_WEB_DASHBOARD_EXPORT = "reports/html/report-load.html"
 ```
 
 Then run the test as usual, e.g.:
 
 ```powershell
-k6 run src/tests/smoke_test.js
+k6 run -e TEST_TYPE=load src/tests/performance_test.js
 ```
 
 The HTML file will be saved to `reports/html/`. You can open it in a browser to view the full results.
@@ -115,7 +118,7 @@ The project is ready for TeamCity integration.
 Every test execution generates a **JUnit XML** report in the `reports/xml/` directory:
 - `reports/xml/result-smoke.xml`
 - `reports/xml/result-load.xml`
-- etc.
+- etc. (filename is based on `TEST_TYPE`)
 
 **Setup in TeamCity**:
 1. Add the **XML Report Processing** build feature.

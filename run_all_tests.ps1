@@ -26,7 +26,7 @@ foreach ($test in $tests) {
     $reportFile = "reports/html/report-${test}.html"
     $env:K6_WEB_DASHBOARD_EXPORT = $reportFile
     
-    & $k6 run --out $influx --tag run_id=$runId ./src/tests/${test}_test.js
+    & $k6 run --out $influx --tag run_id=$runId -e TEST_TYPE=$test ./src/tests/performance_test.js
 }
 
 Write-Host "`n=== All tests completed! ==="

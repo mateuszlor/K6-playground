@@ -18,10 +18,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install k6
-        run: |
-          curl -s https://raw.githubusercontent.com/k6io/k6/master/scripts/install.sh | bash
-          echo "k6 version:" && k6 version
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Show k6 version
+        run: k6 version
 
       - name: Run k6 inspect on all test scripts
         run: |

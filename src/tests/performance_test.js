@@ -21,7 +21,6 @@ export const options = commonConfig[testType];
 export default function () {
     const res = http.get(envConfig.baseUrl);
     check(res, { 'status was 200': (r) => r.status == 200 });
-    sleep(1);
 }
 
 export function handleSummary(data) {

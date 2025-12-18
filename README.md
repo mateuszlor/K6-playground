@@ -42,6 +42,12 @@ The unified script uses environment variables to control its behavior:
 - **ENV**: Target environment (`dev`, `prod`). Default: `dev`.
 - **TEST_TYPE**: Test scenario to run (`smoke`, `load`, `stress`, `spike`). Default: `smoke`.
 
+### 🎯 Arrival Rate Model
+This project uses the **Arrival Rate** model (specifically `constant-arrival-rate` and `ramping-arrival-rate`). 
+- **Predictability**: We define exactly how many requests per second (RPS) we want to achieve.
+- **Decoupling**: The load is independent of the system's response time. Even if the server slows down, k6 will attempt to maintain the target rate.
+- **Efficiency**: No manual `sleep` statements are needed in the code; k6 manages the pacing automatically.
+
 Example:
 ```powershell
 k6 run -e ENV=prod -e TEST_TYPE=load src/tests/performance_test.js

@@ -1,32 +1,58 @@
 {
     "smoke": {
-        "vus": 1,
-        "duration": "10s",
-        "tags": {
-            "test_type": "smoke"
+        "scenarios": {
+            "smoke": {
+                "executor": "constant-arrival-rate",
+                "rate": 1,
+                "timeUnit": "1s",
+                "duration": "10s",
+                "preAllocatedVUs": 1,
+                "maxVUs": 5
+            }
         },
         "thresholds": {
             "checks": [
                 "rate==1"
+            ],
+            "http_req_failed": [
+                "rate<0.01"
+            ],
+            "http_req_duration": [
+                "p(100)<500"
             ]
+        },
+        "tags": {
+            "test_type": "smoke"
         }
     },
     "load": {
-        "stages": [
-            {
-                "duration": "30s",
-                "target": 20
-            },
-            {
-                "duration": "1m",
-                "target": 20
-            },
-            {
-                "duration": "10s",
-                "target": 0
+        "scenarios": {
+            "load": {
+                "executor": "ramping-arrival-rate",
+                "startRate": 0,
+                "timeUnit": "1s",
+                "preAllocatedVUs": 10,
+                "maxVUs": 50,
+                "stages": [
+                    {
+                        "duration": "30s",
+                        "target": 20
+                    },
+                    {
+                        "duration": "1m",
+                        "target": 20
+                    },
+                    {
+                        "duration": "10s",
+                        "target": 0
+                    }
+                ]
             }
-        ],
+        },
         "thresholds": {
+            "http_req_failed": [
+                "rate<0.01"
+            ],
             "http_req_duration": [
                 "p(95)<500"
             ]
@@ -36,21 +62,33 @@
         }
     },
     "stress": {
-        "stages": [
-            {
-                "duration": "2m",
-                "target": 100
-            },
-            {
-                "duration": "5m",
-                "target": 100
-            },
-            {
-                "duration": "2m",
-                "target": 0
+        "scenarios": {
+            "stress": {
+                "executor": "ramping-arrival-rate",
+                "startRate": 0,
+                "timeUnit": "1s",
+                "preAllocatedVUs": 20,
+                "maxVUs": 200,
+                "stages": [
+                    {
+                        "duration": "2m",
+                        "target": 100
+                    },
+                    {
+                        "duration": "5m",
+                        "target": 100
+                    },
+                    {
+                        "duration": "2m",
+                        "target": 0
+                    }
+                ]
             }
-        ],
+        },
         "thresholds": {
+            "http_req_failed": [
+                "rate<0.01"
+            ],
             "http_req_duration": [
                 "p(95)<500"
             ]
@@ -60,21 +98,33 @@
         }
     },
     "spike": {
-        "stages": [
-            {
-                "duration": "10s",
-                "target": 1000
-            },
-            {
-                "duration": "1m",
-                "target": 1000
-            },
-            {
-                "duration": "10s",
-                "target": 0
+        "scenarios": {
+            "spike": {
+                "executor": "ramping-arrival-rate",
+                "startRate": 0,
+                "timeUnit": "1s",
+                "preAllocatedVUs": 100,
+                "maxVUs": 2000,
+                "stages": [
+                    {
+                        "duration": "10s",
+                        "target": 1000
+                    },
+                    {
+                        "duration": "1m",
+                        "target": 1000
+                    },
+                    {
+                        "duration": "10s",
+                        "target": 0
+                    }
+                ]
             }
-        ],
+        },
         "thresholds": {
+            "http_req_failed": [
+                "rate<0.01"
+            ],
             "http_req_duration": [
                 "p(95)<500"
             ]

@@ -1,5 +1,4 @@
 {
-    "baseUrl": "http://test.k6.io",
     "smoke": {
         "vus": 1,
         "duration": "10s",
@@ -53,7 +52,7 @@
         ],
         "thresholds": {
             "http_req_duration": [
-                "p(95)<1000"
+                "p(95)<500"
             ]
         },
         "tags": {
@@ -64,11 +63,11 @@
         "stages": [
             {
                 "duration": "10s",
-                "target": 100
+                "target": 1000
             },
             {
                 "duration": "1m",
-                "target": 100
+                "target": 1000
             },
             {
                 "duration": "10s",
@@ -77,7 +76,7 @@
         ],
         "thresholds": {
             "http_req_duration": [
-                "p(95)<1500"
+                "p(95)<500"
             ]
         },
         "tags": {

@@ -1,14 +1,19 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
-const config = JSON.parse(open('../config.json'));
+import { loadEnvConfig } from './lib/config_loader.js';
 
-import { jUnit, textSummary } from '../lib/junit.js';
+const env = __ENV.ENV || 'dev';
 
-export const options = config.load;
+const commonConfig = JSON.parse(open('../../config/common.json'));
+const envConfig = loadEnvConfig(env);
+
+import { jUnit, textSummary } from './lib/junit.js';
+
+export const options = commonConfig.load;
 
 export default function () {
-    const res = http.get(config.baseUrl);
+    const res = http.get(envConfig.baseUrl);
 
     check(res, {
         'status was 200': (r) => r.status == 200,

@@ -1,5 +1,5 @@
 $k6 = 'C:\Program Files\k6\k6.exe'
-$files = Get-ChildItem -Path "./src" -Filter "*.js"
+$files = Get-ChildItem -Path "./src/tests" -Filter "*.js"
 
 $exitCode = 0
 

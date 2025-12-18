@@ -12,18 +12,16 @@ This project was created with the assistance of **Antigravity**, an agentic AI c
 
 ## 📂 Project Structure
 
-- **Scripts** (`src/`):
-  - `src/smoke_test.js`: Validates system availability (1 VU).
-  - `src/load_test.js`: Standard load test (ramp up to ~20 VUs).
-  - `src/stress_test.js`: Finds system breaking point (ramp up to 100 VUs).
-  - `src/spike_test.js`: Tests stability under sudden bursts (0 -> 100 VUs instantly).
-- **Configuration**:
-  - `config.json`: Centralized configuration for all tests (URLs, stages, thresholds).
+- **Scripts** (`src/tests/`):
+  - `src/tests/performance_test.js`: Unified script that handles all test types based on parameters.
+- **Configuration** (`config/`):
+  - `config/common.json`: Shared test scenarios (stages, thresholds) for each test type (`smoke`, `load`, `stress`, `spike`).
+  - `config/env/*.json`: Environment-specific settings (e.g. `baseUrl`).
 - **Visualization (Docker)**:
   - `docker-compose.yml`: Stack with InfluxDB and Grafana.
   - `grafana/`: Provisioning configs and dashboards.
 - **Reporting**:
-  - `lib/junit.js`: Local reporter for generating CI/CD compatible XMLs.
+  - `src/tests/lib/junit.js`: Local reporter for generating CI/CD compatible XMLs.
   - `run_all_tests.ps1`: Helper script to run the full suite.
   - `validate_tests.ps1`: CI validation script (syntax check).
 
@@ -35,11 +33,25 @@ This project was created with the assistance of **Antigravity**, an agentic AI c
 2. **Docker**: Required for dashboard and history.
 
 ### Configuration
+Customize the tests by editing `config/common.json` (scenarios) or `config/env/*.json` (URLs).
+- **baseUrl**: Target URL (in `config/env/dev.json`).
+- **thresholds**: Pass/Fail criteria (in `config/common.json`).
 
-Customize the tests by editing `config.json`:
-- **baseUrl**: Target URL.
-- **tags**: Used for dashboard filtering (e.g., `"test_type": "smoke"`).
-- **thresholds**: Pass/Fail criteria (e.g., `p(95)<500`).
+### Parameter Injection
+The unified script uses environment variables to control its behavior:
+- **ENV**: Target environment (`dev`, `prod`). Default: `dev`.
+- **TEST_TYPE**: Test scenario to run (`smoke`, `load`, `stress`, `spike`). Default: `smoke`.
+
+### 🎯 Arrival Rate Model
+This project uses the **Arrival Rate** model (specifically `constant-arrival-rate` and `ramping-arrival-rate`). 
+- **Predictability**: We define exactly how many requests per second (RPS) we want to achieve.
+- **Decoupling**: The load is independent of the system's response time. Even if the server slows down, k6 will attempt to maintain the target rate.
+- **Efficiency**: No manual `sleep` statements are needed in the code; k6 manages the pacing automatically.
+
+Example:
+```powershell
+k6 run -e ENV=prod -e TEST_TYPE=load src/tests/performance_test.js
+```
 
 ## 🏃 Running Tests
 
@@ -53,20 +65,23 @@ Run this to check script syntax without executing tests (useful for CI "Build" s
 ```
 
 ### 2. Run All Sequentially (Recommended)
-This script runs Smoke -> Load -> Spike -> Stress tests one by one, sends metrics to InfluxDB, and generates XML reports.
+This script runs Smoke -> Load -> Spike -> Stress tests one by one using the unified script, sends metrics to InfluxDB, and generates XML reports.
 ```powershell
 ./run_all_tests.ps1
 ```
 
 ### 3. Run Manually
-You can run individual tests using k6 directly (mind the `src/` path).
+You can run individual scenarios using k6 by passing the `TEST_TYPE`:
 
 ```powershell
-# Run smoke test
-k6 run src/smoke_test.js
+# Run smoke test (default)
+k6 run src/tests/performance_test.js
+
+# Run load test
+k6 run -e TEST_TYPE=load src/tests/performance_test.js
 
 # Run with output to InfluxDB (for Dashboard)
-k6 run --out influxdb=http://localhost:8086/k6 src/load_test.js
+k6 run --out influxdb=http://localhost:8086/k6 -e TEST_TYPE=stress src/tests/performance_test.js
 ```
 
 #### 📄 HTML Reports (Optional)
@@ -75,13 +90,13 @@ The native k6 web dashboard can export an HTML report. To generate it, set the f
 
 ```powershell
 $env:K6_WEB_DASHBOARD = "true"
-$env:K6_WEB_DASHBOARD_EXPORT = "reports/html/report-${test}.html"
+$env:K6_WEB_DASHBOARD_EXPORT = "reports/html/report-load.html"
 ```
 
 Then run the test as usual, e.g.:
 
 ```powershell
-k6 run src/smoke_test.js
+k6 run -e TEST_TYPE=load src/tests/performance_test.js
 ```
 
 The HTML file will be saved to `reports/html/`. You can open it in a browser to view the full results.
@@ -109,11 +124,59 @@ The project is ready for TeamCity integration.
 Every test execution generates a **JUnit XML** report in the `reports/xml/` directory:
 - `reports/xml/result-smoke.xml`
 - `reports/xml/result-load.xml`
-- etc.
+- etc. (filename is based on `TEST_TYPE`)
 
 **Setup in TeamCity**:
 1. Add the **XML Report Processing** build feature.
 2. Select **Ant/JUnit** report type.
 3. Monitor pattern: `reports/xml/result-*.xml`.
 
-TeamCity will display pass/fail statistics based on the **thresholds** defined in `config.json`.
+TeamCity will display pass/fail statistics based on the **thresholds** defined in `config/common.json`.
+
+## 📈 Expected Output
+
+When running the test suite, you should see a summary similar to this:
+
+```text
+     scenarios: (100.00%) 1 scenario, 10 max VUs, 1m0s max duration (incl. graceful stop):
+              * default: 200 iterations shared among 10 VUs (maxDuration: 30s, gracefulStop: 30s)
+
+
+running (0m00.1s), 10/10 VUs, 0 complete and 0 interrupted iterations
+   k6 results summary                                                                     
+                                                                                    
+running (0m23.8s), 00/10 VUs, 200 complete and 0 interrupted iterations             
+default ✓ [===============================] 10 VUs  23.8s/30s  200/200 shared iters 
+```
+
+## 📊 Report Analysis
+
+If you enable the HTML dashboard, the report provides deep insights into your test run.
+
+### 1. Summary Header
+Located at the very top, this bar provides a quick check on the health of your test run.
+- **checks**: The most important metric (e.g., `100/100.0%` means all assertions passed).
+- **http_req_duration**: Quick peek at latency stats (avg, p95).
+- **Date**: Timestamp of the run.
+
+![Report Header](docs/images/report_header.png)
+
+### 2. Performance Graphs
+The core visualization area. The visible charts allow you to spot trends immediately:
+
+- **Request Rate (Green)**: The number of requests per second (RPS). A decline here might indicate the system is struggling.
+- **Request Duration (Purple)**: The overall latency distribution (p90, p95). Spikes here show performance degradation.
+- **Request Waiting (Blue)**: Time waiting for the first byte (TTFB).
+- **TLS Handshaking**: Time spent on SSL negotiation.
+
+*(Other metrics like Connecting and Sending are available by scrolling down)*
+
+![Report Graphs](docs/images/report_graphs.png)
+
+### 3. Statistics Table
+The bottom section contains raw data for deep analysis.
+- **Metric**: The name of the measurement (e.g., `http_req_duration`, `iteration_duration`).
+- **Aggregates**: Detailed columns for `Avg`, `Min`, `Med`, `Max`, `p90`, and `p95`.
+- Use this table to debug specific outliers seen in the graphs.
+
+![Report Table](docs/images/report_table.png)
